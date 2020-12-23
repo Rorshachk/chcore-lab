@@ -120,6 +120,34 @@ static int printk_write_num(char **out, long long i, int base, int sign,
 	// 1. the last postion of this buffer must be '\0'
 	// 2. the format is only decided by `base` and `letbase` here
 
+
+	for(int i = 0; i < PRINT_BUF_LEN; i++) print_buf[i] = 0;
+	
+
+	int len = 0;
+	while (u) {
+		int tmp = u % base;
+		if(tmp >= 10) {
+			print_buf[len++] = 'A' + (tmp - 10) + 32 * letbase;
+		} else {
+			print_buf[len++] = '0' + tmp;
+		}
+		u /= base;
+	}
+
+	for(int i = 0; i < len / 2; i++){
+		char tmp = print_buf[i];
+		print_buf[i] = print_buf[len - 1 - i];
+		print_buf[len - 1 - i] = tmp;
+	}
+
+
+
+	pc += prints(out, print_buf, width, flags);
+	
+	//It seems the prints function will change the value of print_buf[len]
+	print_buf[len] = '\0';
+
 	if (neg) {
 		if (width && (flags & PAD_ZERO)) {
 			simple_outputchar(out, '-');

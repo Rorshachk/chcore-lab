@@ -31,5 +31,17 @@ int stack_backtrace()
 
 	// Your code here.
 
+	u64 fp = read_fp(), next_fp;
+	u64 args[5];
+
+	while((next_fp = *(u64 *)fp) != 0){
+		u64 lr = *(u64 *)(next_fp + 8);
+		u64 addr = fp + 16;
+		for(int i = 0; i < 5; i++)
+		  args[i] = *(u64 *)(addr + i * 8);
+		printk("LR %lx FP %lx Args %lx %lx %lx %lx %lx\n", lr, next_fp, args[0], args[1], args[2], args[3], args[4]);
+		fp = next_fp;
+	}
+
 	return 0;
 }
