@@ -183,7 +183,7 @@ static struct page *merge_page(struct phys_mem_pool *pool, struct page *page)
     pool->free_lists[page->order].nr_free -= 2;
     
     
-    //Add the new big page in the free list
+    //Add the new big page to the free list
     merged_page = page;
     merged_page->order++;
     merged_page->allocated = 0;
