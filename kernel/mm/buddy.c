@@ -124,7 +124,7 @@ struct page *buddy_get_pages(struct phys_mem_pool *pool, u64 order)
 {
 	// <lab2>
     
-    kdebug("Get page in order %d\n", order);
+//    kdebug("Get page in order %d\n", order);
 
 	struct page *page = NULL;
 
@@ -137,11 +137,11 @@ struct page *buddy_get_pages(struct phys_mem_pool *pool, u64 order)
 
     struct page* target_page = list_entry(pool->free_lists[target_order].free_list.next, struct page, node);
 
-    kdebug("The target page is in order %d\n", target_page->order);
+//    kdebug("The target page is in order %d\n", target_page->order);
 
     page = split_page(pool, order, target_page);
 
-    kdebug("Successfully get the split page\n");
+//    kdebug("Successfully get the split page\n");
     
     page->allocated = 1;
     pool->free_lists[page->order].nr_free--;
@@ -210,7 +210,7 @@ void buddy_free_pages(struct phys_mem_pool *pool, struct page *page)
     list_add(&(page->node), &(pool->free_lists[page->order].free_list));
     pool->free_lists[page->order].nr_free++;
 
-    kdebug("free page\n");
+//    kdebug("free page\n");
 
     merge_page(pool, page);
 
