@@ -124,7 +124,7 @@ static int printk_write_num(char **out, long long i, int base, int sign,
 	for(int i = 0; i < PRINT_BUF_LEN; i++) print_buf[i] = 0;
 	
 
-	int len = PRINT_BUF_LEN;
+	int len = PRINT_BUF_LEN - 1;
 	while (u) {
 		int tmp = u % base;
 		if(tmp >= 10) {
