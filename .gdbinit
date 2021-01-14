@@ -13,8 +13,4 @@ define add-symbol-file-auto
 end
 
 add-symbol-file-auto ./build/kernel.img
-<<<<<<< HEAD
-add-symbol-file-auto ./user/build/ramdisk/testpf.bin
-=======
-add-symbol-file-auto ./user/build/ramdisk/faultread.bin
->>>>>>> lab3-sol
+add-symbol-file-auto ./user/build/ramdisk/ipc.bin
