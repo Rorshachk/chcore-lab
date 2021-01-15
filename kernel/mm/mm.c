@@ -16,7 +16,9 @@
 
 #include "buddy.h"
 #include "slab.h"
+#include "page_table.h"
 
+extern int get_next_ptp(ptp_t * cur_ptp, u32 level, vaddr_t va, ptp_t ** next_ptp, pte_t ** pte, bool alloc);
 extern unsigned long *img_end;
 
 #define PHYSICAL_MEM_START (24*1024*1024)	//24M
@@ -51,7 +53,41 @@ unsigned long get_ttbr1(void)
 void map_kernel_space(vaddr_t va, paddr_t pa, size_t len)
 {
 	// <lab2>
+    vmr_prop_t flags = 0;
+    vaddr_t pgtbl = get_ttbr1();
 
+    int ret;
+    ptp_t* next_ptp;
+    pte_t* entry;
+    //Use get_next_ptp(alloc=true) to add a new page
+    for(vaddr_t i_va = va, i_pa = pa; i_va < va + len && i_pa < pa + len; i_pa += (1 << 21), i_va += (1 << 21)){
+        //L0
+        if((ret=get_next_ptp((ptp_t *)pgtbl, 0, i_va, &next_ptp, &entry, true)) < 0) 
+          return ;
+
+        //L1
+        if((ret=get_next_ptp(next_ptp, 1, i_va, &next_ptp, &entry, true)) < 0)
+          return ;
+
+        //L2
+        ret=get_next_ptp(next_ptp, 2, i_va, &next_ptp, &entry, true);
+        
+        //No L3 according to lab instruction
+
+        //The result page descripter is stored in entry (L3 PTE)
+    //    set_pte_flags(entry, flags, 1);
+
+        entry->l2_block.UXN = 1;
+        entry->l2_block.AF = 1;
+        entry->l2_block.SH = 3;
+        entry->l2_block.attr_index = 4;
+
+        entry->l2_block.is_table = 0;
+        entry->l2_block.is_valid = 1;
+
+        entry->l2_block.pfn = i_pa>>21;
+    }
+//    flush_tlb();
 	// </lab2>
 }
 
@@ -91,7 +127,9 @@ void mm_init(void)
 	       page_meta_start, start_vaddr, npages, sizeof(struct page));
 
 	/* buddy alloctor for managing physical memory */
+    kdebug("before buddy init\n");
 	init_buddy(&global_mem, page_meta_start, start_vaddr, npages);
+    kdebug("After buddy init\n");
 
 	/* slab alloctor for allocating small memory regions */
 	init_slab();

@@ -84,7 +84,7 @@ static int set_pte_flags(pte_t * entry, vmr_prop_t flags, int kind)
  * alloc: if true, allocate a ptp when missing
  *
  */
-static int get_next_ptp(ptp_t * cur_ptp, u32 level, vaddr_t va,
+int get_next_ptp(ptp_t * cur_ptp, u32 level, vaddr_t va,
 			ptp_t ** next_ptp, pte_t ** pte, bool alloc)
 {
 	u32 index = 0;
@@ -163,6 +163,39 @@ int query_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t * pa, pte_t ** entry)
 {
 	// <lab2>
 
+    ptp_t* next_ptp;
+    int ret;
+
+    //L0, there is no block descriptor(BLOCK_PTP) in L0 page table
+    if((ret=get_next_ptp((ptp_t *)pgtbl, 0, va, &next_ptp, entry, false)) < 0){
+        return ret;
+    }
+
+    //L1
+    if((ret=get_next_ptp(next_ptp, 1, va, &next_ptp, entry, false)) < 0){
+        return ret;
+    }
+    //If BLOCK_PTP is returned, it means the entry is PFN instead of page table page
+    //and the next_ptp will store the high bits of pa
+    else if(ret == BLOCK_PTP){
+        *pa = GET_VA_OFFSET_L1(va) + virt_to_phys((vaddr_t) next_ptp);
+        return 0;
+    }
+
+    //L2
+    if((ret=get_next_ptp(next_ptp, 2, va, &next_ptp, entry, false)) < 0){
+        return ret;
+    }
+    else if(ret == BLOCK_PTP){
+        *pa = GET_VA_OFFSET_L2(va) + virt_to_phys((vaddr_t) next_ptp);
+        return 0;
+    }
+
+    if((ret=get_next_ptp(next_ptp, 3, va, &next_ptp, entry, false)) < 0){
+        return ret;
+    }
+    *pa = GET_VA_OFFSET_L3(va) + virt_to_phys((vaddr_t) next_ptp);
+
 	// </lab2>
 	return 0;
 }
@@ -186,6 +219,32 @@ int map_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
 		       size_t len, vmr_prop_t flags)
 {
 	// <lab2>
+    int ret;
+    ptp_t* next_ptp;
+    pte_t* entry;
+    //Use get_next_ptp(alloc=true) to add a new page
+    for(vaddr_t i_va = va, i_pa = pa; i_va < va + len && i_pa < pa + len; i_pa += PAGE_SIZE, i_va += PAGE_SIZE){
+        //L0
+        if((ret=get_next_ptp((ptp_t *)pgtbl, 0, i_va, &next_ptp, &entry, true)) < 0) 
+          return ret;
+
+        //L1
+        if((ret=get_next_ptp(next_ptp, 1, i_va, &next_ptp, &entry, true)) < 0)
+          return ret;
+
+        //L2
+        if((ret=get_next_ptp(next_ptp, 2, i_va, &next_ptp, &entry, true)) < 0)
+          return ret;
+        
+        //L3
+        if((ret=get_next_ptp(next_ptp, 3, i_va, &next_ptp, &entry, true)) < 0)
+          return ret;
+
+        //The result page descripter is stored in entry (L3 PTE)
+        set_pte_flags(entry, flags, USER_PTE);
+        entry->l3_page.pfn = i_pa>>PAGE_SHIFT;
+    }
+    flush_tlb();
 
 	// </lab2>
 	return 0;
@@ -207,6 +266,40 @@ int map_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
 int unmap_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, size_t len)
 {
 	// <lab2>
+    int ret;
+    ptp_t* next_ptp;
+    pte_t* entry;
+    //Use get_next_ptp(alloc=true) to add a new page
+    for(vaddr_t i_va = va; i_va < va + len; i_va += PAGE_SIZE){
+        //L0
+        if((ret=get_next_ptp((ptp_t *)pgtbl, 0, i_va, &next_ptp, &entry, true)) < 0) 
+          return ret;
+
+        //L1, it's possible to return a BLOCK_PTP
+        if((ret=get_next_ptp(next_ptp, 1, i_va, &next_ptp, &entry, true)) < 0)
+          return ret;
+        else if(ret == BLOCK_PTP){
+            entry->l1_block.is_valid = 0;
+            continue;
+        }
+
+
+        //L2
+        if((ret=get_next_ptp(next_ptp, 2, i_va, &next_ptp, &entry, true)) < 0)
+          return ret;
+        else if(ret == BLOCK_PTP){
+            entry->l2_block.is_valid = 0;
+            continue;
+        }
+        
+        //L3
+        if((ret=get_next_ptp(next_ptp, 3, i_va, &next_ptp, &entry, true)) < 0)
+          return ret;
+
+        //The result page descripter is stored in entry (L3 PTE)
+        entry->l3_page.is_valid = 0;
+    }
+    flush_tlb();
 
 	// </lab2>
 	return 0;

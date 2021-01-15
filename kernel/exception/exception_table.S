@@ -91,6 +91,7 @@
  * 	unlock the big kernel lock before returning to the user mode
  */
 .macro	exception_return
+    bl unlock_kernel
 	exception_exit
 .endm
 
@@ -130,6 +131,28 @@
  */
 .align	11
 EXPORT(el1_vector)
+
+/* According to lab instruction, the order is SP_EL0, SP_EL1, EL0 AArch64, EL0 AArch32*/
+    exception_entry sync_el1t
+    exception_entry irq_el1t
+    exception_entry fiq_el1t
+    exception_entry error_el1t
+
+    exception_entry sync_el1h
+    exception_entry irq_el1h
+    exception_entry fiq_el1h
+    exception_entry error_el1h
+
+    exception_entry sync_el0_64
+    exception_entry irq_el0_64
+    exception_entry fiq_el0_64
+    exception_entry error_el0_64
+
+    exception_entry sync_el0_32
+    exception_entry irq_el0_32
+    exception_entry fiq_el0_32
+    exception_entry error_el0_32
+
 
 sync_el1t:
 	handle_entry	1, SYNC_EL1t

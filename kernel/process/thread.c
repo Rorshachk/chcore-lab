@@ -176,6 +176,13 @@ static u64 load_binary(struct process *process,
 			 * and mapping physical memory.
 			 */
 
+            //According to Wiki we can see those information are in the program header
+            seg_sz = elf->p_headers[i].p_memsz;
+            p_vaddr = elf->p_headers[i].p_paddr;
+            u64 start_vaddr_num = p_vaddr / PAGE_SIZE;
+            u64 end_vaddr_num = (p_vaddr + seg_sz - 1) / PAGE_SIZE + 1;
+            seg_map_sz = (end_vaddr_num - start_vaddr_num) * PAGE_SIZE;
+
 			pmo = obj_alloc(TYPE_PMO, sizeof(*pmo));
 			if (!pmo) {
 				r = -ENOMEM;
@@ -193,6 +200,9 @@ static u64 load_binary(struct process *process,
 			 * You should copy data from the elf into the physical memory in pmo.
 			 * The physical address of a pmo can be get from pmo->start.
 			 */
+
+            //The segment address in bin is bin + p_offset
+            memcpy(phys_to_virt(pmo->start) + p_vaddr - start_vaddr_num * PAGE_SIZE, bin + elf->p_headers[i].p_offset, elf->p_headers[i].p_filesz);
 
 			flags = PFLAGS2VMRFLAGS(elf->p_headers[i].p_flags);
 
@@ -381,7 +391,11 @@ int sys_set_affinity(u64 thread_cap, s32 aff)
 	 * Lab4
 	 * Finish the sys_set_affinity
 	 */
-	return -1;
+	if(thread == NULL || (aff >= PLAT_CPU_NUM && aff != NO_AFF))
+      return -EINVAL;
+    thread->thread_ctx->affinity = aff;
+ //   if(thread_cap != -1) obj_put(thread);
+    return ret;
 }
 
 int sys_get_affinity(u64 thread_cap)
@@ -402,5 +416,11 @@ int sys_get_affinity(u64 thread_cap)
 	 * Lab4
 	 * Finish the sys_get_affinity
 	 */
-	return -1;
+
+    if(thread == NULL || (aff >= PLAT_CPU_NUM && aff != NO_AFF))
+      return -EINVAL;
+    aff = thread->thread_ctx->affinity;
+//    if(thread_cap != -1) obj_put(thread);
+
+	return aff;
 }
