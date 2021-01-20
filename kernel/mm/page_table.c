@@ -20,6 +20,7 @@
 #include <common/printk.h>
 #include <common/mm.h>
 #include <common/mmu.h>
+#include <common/kprint.h>
 
 #include <common/errno.h>
 
@@ -218,6 +219,12 @@ int query_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t * pa, pte_t ** entry)
 int map_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
 		       size_t len, vmr_prop_t flags)
 {
+
+    // kinfo("VA: %llx\n", va);
+    // kinfo("PA: %llx\n", pa);
+    // kinfo("length: %d\n", len);
+
+
 	// <lab2>
     int ret;
     ptp_t* next_ptp;
@@ -225,6 +232,7 @@ int map_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
     //Use get_next_ptp(alloc=true) to add a new page
     for(vaddr_t i_va = va, i_pa = pa; i_va < va + len && i_pa < pa + len; i_pa += PAGE_SIZE, i_va += PAGE_SIZE){
         //L0
+
         if((ret=get_next_ptp((ptp_t *)pgtbl, 0, i_va, &next_ptp, &entry, true)) < 0) 
           return ret;
 
@@ -235,10 +243,37 @@ int map_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
         //L2
         if((ret=get_next_ptp(next_ptp, 2, i_va, &next_ptp, &entry, true)) < 0)
           return ret;
+
+
+        // if(i_va == 0x1200000){
+        //     kinfo("next ptp address before L3: %llx\n", (vaddr_t)(next_ptp));
+        // }
+
+
         
+
         //L3
-        if((ret=get_next_ptp(next_ptp, 3, i_va, &next_ptp, &entry, true)) < 0)
-          return ret;
+        u32 index = GET_L3_INDEX(i_va);
+		entry = &(next_ptp->ent[index]);
+
+        // if(IS_PTE_INVALID(entry->pte)){
+        //     kinfo("PTE invalid!\n");
+        //     kinfo("VA: %llx\n", i_va);
+        //     while(1);
+        // }
+
+        // if((ret=get_next_ptp(next_ptp, 3, i_va, &next_ptp, &entry, true)) < 0)
+        //   return ret;
+
+
+//         if(i_va == 0x1200000){
+//             kinfo("entry address after L3: %llx\n", (paddr_t)entry);
+//  //           while(1);
+//         }
+
+        entry->pte = 0;
+		entry->l3_page.is_valid = 1;
+		entry->l3_page.is_page = 1;
 
         //The result page descripter is stored in entry (L3 PTE)
         set_pte_flags(entry, flags, USER_PTE);

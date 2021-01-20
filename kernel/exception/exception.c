@@ -68,6 +68,8 @@ void handle_entry_c(int type, u64 esr, u64 address)
     
 
 	/* Dispatch exception according to EC */
+    // kinfo("esr_ec: %d\n", esr_ec);
+    // kinfo("esr: %llx\n", esr);
 	switch (esr_ec) {
 		/*
 		 * Lab3: Your code here

@@ -41,15 +41,15 @@ void init_buddy(struct phys_mem_pool *pool, struct page *start_page,
 		page->order = 0;
 	}
 
-    kdebug("Initializing %d pages\n", page_num);
+//    kdebug("Initializing %d pages\n", page_num);
 
 	/* Put each physical memory page into the free lists. */
 	for (page_idx = 0; page_idx < page_num; ++page_idx) {
-        kdebug("free page %d\n", page_idx);
+  //      kdebug("free page %d\n", page_idx);
 		page = start_page + page_idx;
 		buddy_free_pages(pool, page);
 	}
-    kdebug("free page finised\n");
+//    kdebug("free page finised\n");
 }
 
 static struct page *get_buddy_chunk(struct phys_mem_pool *pool,
@@ -224,7 +224,7 @@ void buddy_free_pages(struct phys_mem_pool *pool, struct page *page)
     list_add(&(page->node), &(pool->free_lists[page->order].free_list));
     pool->free_lists[page->order].nr_free++;
 
-    kdebug("free this page and ready to merge it\n");
+//    kdebug("free this page and ready to merge it\n");
 
     merge_page(pool, page);
 
