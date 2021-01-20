@@ -76,7 +76,9 @@ static int radix_add(struct radix *radix, u64 key, void *value)
 
 	/* the intermediate levels */
 	for (i = RADIX_LEVELS - 1; i > 0; --i) {
+//        printf("%d: ", i);
 		k = index[i];
+ //       printf("%d, ", k);
 		if (!node->children[k]) {
 			new = new_radix_node();
 			if (IS_ERR(new))
@@ -85,6 +87,7 @@ static int radix_add(struct radix *radix, u64 key, void *value)
 		}
 		node = node->children[k];
 	}
+ //   printf("\n");
 
 	/* the leaf level */
 	k = index[0];

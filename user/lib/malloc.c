@@ -26,14 +26,25 @@ void *malloc(size_t size)
 {
 	BUG_ON(malloc_header_ + size > MALLOC_SZ);
 
+    // printf("Start malloc size: %d\n", size);
+
 	if (malloc_header_ == 0) {
+
+        // printf("PMO header is 0\n");
+
 		int pmo_cap, r;
 		pmo_cap = usys_create_pmo(MALLOC_SZ, PMO_ANONYM);
+
+        // printf("usys create pmo: %d\n", pmo_cap);
+
 		if (pmo_cap < 0) {
 			printf("usys_create_pmo ret:%d\n", pmo_cap);
 			usys_exit(pmo_cap);
 		}
 		r = usys_map_pmo(SELF_CAP, pmo_cap, MAP_VA, VM_READ | VM_WRITE);
+
+        // printf("usys map pmo: %d\n", r);
+
 		if (r < 0) {
 			printf("usys_map_pmo ret:%d\n", r);
 			usys_exit(r);
@@ -42,19 +53,28 @@ void *malloc(size_t size)
 		malloc_buf_ = (char *)MAP_VA;
 	}
 
+    // printf("Reach malloc\n");
+
 	void *ptr = (void *)&malloc_buf_[malloc_header_];
 	malloc_header_ += size;
+
+    // printf("Ready to return: %x, %d\n", (int)ptr, malloc_header_);
 
 	return ptr;
 }
 
 void *calloc(size_t nmemb, size_t size)
 {
+//    printf("stuck at calloc? ");
 	(void)nmemb;
 	(void)size;
 
 	void *ptr = malloc(nmemb * size);
+    // printf("Start memset, ptr: %llx, length: %d\n", (u64)ptr, size);
+
 	memset(ptr, 0, nmemb * size);
+    // printf("Memset end\n");
+//    printf("No! ");
 
 	return ptr;
 }

@@ -1,5 +1,5 @@
 #include <lib/type.h>
-
+#include <lib/print.h>
 /*
  * A very shabby implementation, optimize it if you like.
  */
@@ -7,7 +7,10 @@
 void memset(void *dst, int c, u64 len)
 {
 	u64 i = 0;
+    // printf("%llx\n", (u64)dst);
 	for (; i < len; i += 1) {
+        // if((u64)dst == 0x11ff37f)
+        //   printf("%llx ", (u64)(dst + i));
 		((u8 *) dst)[i] = (u8) c;
 	}
 }

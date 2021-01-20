@@ -1,0 +1,130 @@
+Dump of assembler code for function sync_el0_64:
+   0xffffff0000097cc4 <+0>:	sub	sp, sp, #0x118
+   0xffffff0000097cc8 <+4>:	stp	x0, x1, [sp]
+   0xffffff0000097ccc <+8>:	stp	x2, x3, [sp, #16]
+   0xffffff0000097cd0 <+12>:	stp	x4, x5, [sp, #32]
+   0xffffff0000097cd4 <+16>:	stp	x6, x7, [sp, #48]
+   0xffffff0000097cd8 <+20>:	stp	x8, x9, [sp, #64]
+   0xffffff0000097cdc <+24>:	stp	x10, x11, [sp, #80]
+   0xffffff0000097ce0 <+28>:	stp	x12, x13, [sp, #96]
+   0xffffff0000097ce4 <+32>:	stp	x14, x15, [sp, #112]
+   0xffffff0000097ce8 <+36>:	stp	x16, x17, [sp, #128]
+   0xffffff0000097cec <+40>:	stp	x18, x19, [sp, #144]
+   0xffffff0000097cf0 <+44>:	stp	x20, x21, [sp, #160]
+   0xffffff0000097cf4 <+48>:	stp	x22, x23, [sp, #176]
+   0xffffff0000097cf8 <+52>:	stp	x24, x25, [sp, #192]
+   0xffffff0000097cfc <+56>:	stp	x26, x27, [sp, #208]
+   0xffffff0000097d00 <+60>:	stp	x28, x29, [sp, #224]
+   0xffffff0000097d04 <+64>:	mrs	x10, sp_el0
+   0xffffff0000097d08 <+68>:	mrs	x11, elr_el1
+   0xffffff0000097d0c <+72>:	mrs	x12, spsr_el1
+   0xffffff0000097d10 <+76>:	stp	x30, x10, [sp, #240]
+   0xffffff0000097d14 <+80>:	stp	x11, x12, [sp, #256]
+   0xffffff0000097d18 <+84>:	mrs	x25, esr_el1
+   0xffffff0000097d1c <+88>:	lsr	x24, x25, #26
+   0xffffff0000097d20 <+92>:	cmp	x24, #0x15
+   0xffffff0000097d24 <+96>:	b.eq	0xffffff0000097d94 <el0_syscall>  // b.none
+   0xffffff0000097d28 <+100>:	mov	x0, #0x8                   	// #8
+   0xffffff0000097d2c <+104>:	mrs	x1, esr_el1
+   0xffffff0000097d30 <+108>:	mrs	x2, elr_el1
+   0xffffff0000097d34 <+112>:	bl	0xffffff00000967c0 <handle_entry_c>
+=> 0xffffff0000097d38 <+116>:	bl	0xffffff000008e248 <unlock_kernel>
+   0xffffff0000097d3c <+120>:	ldp	x11, x12, [sp, #256]
+   0xffffff0000097d40 <+124>:	ldp	x30, x10, [sp, #240]
+   0xffffff0000097d44 <+128>:	msr	sp_el0, x10
+   0xffffff0000097d48 <+132>:	msr	elr_el1, x11
+   0xffffff0000097d4c <+136>:	msr	spsr_el1, x12
+   0xffffff0000097d50 <+140>:	ldp	x0, x1, [sp]
+   0xffffff0000097d54 <+144>:	ldp	x2, x3, [sp, #16]
+   0xffffff0000097d58 <+148>:	ldp	x4, x5, [sp, #32]
+   0xffffff0000097d5c <+152>:	ldp	x6, x7, [sp, #48]
+   0xffffff0000097d60 <+156>:	ldp	x8, x9, [sp, #64]
+   0xffffff0000097d64 <+160>:	ldp	x10, x11, [sp, #80]
+   0xffffff0000097d68 <+164>:	ldp	x12, x13, [sp, #96]
+   0xffffff0000097d6c <+168>:	ldp	x14, x15, [sp, #112]
+   0xffffff0000097d70 <+172>:	ldp	x16, x17, [sp, #128]
+   0xffffff0000097d74 <+176>:	ldp	x18, x19, [sp, #144]
+   0xffffff0000097d78 <+180>:	ldp	x20, x21, [sp, #160]
+   0xffffff0000097d7c <+184>:	ldp	x22, x23, [sp, #176]
+   0xffffff0000097d80 <+188>:	ldp	x24, x25, [sp, #192]
+   0xffffff0000097d84 <+192>:	ldp	x26, x27, [sp, #208]
+   0xffffff0000097d88 <+196>:	ldp	x28, x29, [sp, #224]
+   0xffffff0000097d8c <+200>:	add	sp, sp, #0x118
+   0xffffff0000097d90 <+204>:	eret
+End of assembler dump.
+0xffffff0000097d3c in sync_el0_64 ()
+0xffffff0000097d40 in sync_el0_64 ()
+0xffffff0000097d44 in sync_el0_64 ()
+0xffffff0000097d48 in sync_el0_64 ()
+0xffffff0000097d4c in sync_el0_64 ()
+0xffffff0000097d50 in sync_el0_64 ()
+0xffffff0000097d54 in sync_el0_64 ()
+0xffffff0000097d58 in sync_el0_64 ()
+0xffffff0000097d5c in sync_el0_64 ()
+0xffffff0000097d60 in sync_el0_64 ()
+0xffffff0000097d64 in sync_el0_64 ()
+0xffffff0000097d68 in sync_el0_64 ()
+0xffffff0000097d6c in sync_el0_64 ()
+0xffffff0000097d70 in sync_el0_64 ()
+0xffffff0000097d74 in sync_el0_64 ()
+0xffffff0000097d78 in sync_el0_64 ()
+0xffffff0000097d7c in sync_el0_64 ()
+0xffffff0000097d80 in sync_el0_64 ()
+0xffffff0000097d84 in sync_el0_64 ()
+0xffffff0000097d88 in sync_el0_64 ()
+0xffffff0000097d8c in sync_el0_64 ()
+0xffffff0000097d90 in sync_el0_64 ()
+0x00000000004013bc in init_tmpfs ()
+Dump of assembler code for function init_tmpfs:
+   0x0000000000401378 <+0>:	stp	x29, x30, [sp, #-32]!
+   0x000000000040137c <+4>:	adrp	x0, 0x405000 <usys_putc+56>
+   0x0000000000401380 <+8>:	add	x0, x0, #0x950
+   0x0000000000401384 <+12>:	mov	x29, sp
+   0x0000000000401388 <+16>:	stp	x19, x20, [sp, #16]
+   0x000000000040138c <+20>:	bl	0x403c70 <printf>
+   0x0000000000401390 <+24>:	adrp	x0, 0x405000 <usys_putc+56>
+   0x0000000000401394 <+28>:	add	x0, x0, #0x828
+   0x0000000000401398 <+32>:	bl	0x403c70 <printf>
+   0x000000000040139c <+36>:	mov	x0, #0x20                  	// #32
+   0x00000000004013a0 <+40>:	bl	0x4037b0 <malloc>
+   0x00000000004013a4 <+44>:	mov	x19, x0
+   0x00000000004013a8 <+48>:	mov	w1, w0
+   0x00000000004013ac <+52>:	adrp	x0, 0x405000 <usys_putc+56>
+   0x00000000004013b0 <+56>:	add	x0, x0, #0x838
+   0x00000000004013b4 <+60>:	bl	0x403c70 <printf>
+   0x00000000004013b8 <+64>:	mov	x20, x19
+=> 0x00000000004013bc <+68>:	ldr	w1, [x19]
+   0x00000000004013c0 <+72>:	adrp	x0, 0x405000 <usys_putc+56>
+   0x00000000004013c4 <+76>:	add	x0, x0, #0x850
+   0x00000000004013c8 <+80>:	bl	0x403c70 <printf>
+   0x00000000004013cc <+84>:	ldr	w1, [x19, #8]
+   0x00000000004013d0 <+88>:	adrp	x0, 0x405000 <usys_putc+56>
+   0x00000000004013d4 <+92>:	add	x0, x0, #0x860
+   0x00000000004013d8 <+96>:	bl	0x403c70 <printf>
+   0x00000000004013dc <+100>:	movi	v0.4s, #0x0
+   0x00000000004013e0 <+104>:	adrp	x0, 0x405000 <usys_putc+56>
+   0x00000000004013e4 <+108>:	add	x0, x0, #0x870
+   0x00000000004013e8 <+112>:	str	q0, [x20], #20
+   0x00000000004013ec <+116>:	bl	0x403c70 <printf>
+   0x00000000004013f0 <+120>:	cmp	x20, #0x13
+   0x00000000004013f4 <+124>:	b.ls	0x401418 <init_tmpfs+160>  // b.plast
+   0x00000000004013f8 <+128>:	mov	x1, #0x2                   	// #2
+   0x00000000004013fc <+132>:	mov	w0, #0x400                 	// #1024
+   0x0000000000401400 <+136>:	str	x1, [x19]
+   0x0000000000401404 <+140>:	mov	x1, #0x2000                	// #8192
+   0x0000000000401408 <+144>:	str	w0, [x19, #24]
+   0x000000000040140c <+148>:	mov	x0, #0x1                   	// #1
+   0x0000000000401410 <+152>:	bl	0x403900 <calloc>
+   0x0000000000401414 <+156>:	str	x0, [x19, #16]
+   0x0000000000401418 <+160>:	adrp	x1, 0x416000 <tmpfs_root>
+   0x000000000040141c <+164>:	mov	w0, #0x0                   	// #0
+   0x0000000000401420 <+168>:	str	x19, [x1]
+   0x0000000000401424 <+172>:	ldp	x19, x20, [sp, #16]
+   0x0000000000401428 <+176>:	ldp	x29, x30, [sp], #32
+   0x000000000040142c <+180>:	ret
+End of assembler dump.
+0xffffff0000097cc4 in sync_el0_64 ()
+Undefined command: "Q".  Try "help".
+Undefined command: "Y".  Try "help".
+Detaching from program: , process 1
+Remote connection closed
