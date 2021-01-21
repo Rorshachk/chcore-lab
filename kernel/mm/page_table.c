@@ -309,12 +309,16 @@ int unmap_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, size_t len)
         //L0
         if((ret=get_next_ptp((ptp_t *)pgtbl, 0, i_va, &next_ptp, &entry, true)) < 0) 
           return ret;
+        else if(ret == BLOCK_PTP){
+            entry->table.is_valid = 0;
+            continue;
+        }
 
         //L1, it's possible to return a BLOCK_PTP
         if((ret=get_next_ptp(next_ptp, 1, i_va, &next_ptp, &entry, true)) < 0)
           return ret;
         else if(ret == BLOCK_PTP){
-            entry->l1_block.is_valid = 0;
+            entry->table.is_valid = 0;
             continue;
         }
 
@@ -323,13 +327,14 @@ int unmap_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, size_t len)
         if((ret=get_next_ptp(next_ptp, 2, i_va, &next_ptp, &entry, true)) < 0)
           return ret;
         else if(ret == BLOCK_PTP){
-            entry->l2_block.is_valid = 0;
+            entry->table.is_valid = 0;
             continue;
         }
         
         //L3
-        if((ret=get_next_ptp(next_ptp, 3, i_va, &next_ptp, &entry, true)) < 0)
-          return ret;
+        u32 index = GET_L3_INDEX(i_va);
+        entry = &(next_ptp->ent[index]);
+        entry->l3_page.is_valid = 0;
 
         //The result page descripter is stored in entry (L3 PTE)
         entry->l3_page.is_valid = 0;

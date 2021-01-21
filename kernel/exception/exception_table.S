@@ -221,7 +221,7 @@ el0_syscall:
 	blr	x16
 
 	/* Ret from syscall */
-	// bl	disable_irq
+	; bl	disable_irq
 	str	x0, [sp] /* set the return value of the syscall */
 	exception_return
 	

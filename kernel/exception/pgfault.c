@@ -97,15 +97,25 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
     pmo = vmr->pmo;
     if(pmo->type != PMO_ANONYM)  return -ENOMAPPING;
 
+    int flg = 0;
+    if(fault_addr == 0x1331000)
+      flg = 1;
+
     void* page = get_pages(0);
 
     pa = (paddr_t)virt_to_phys((vaddr_t)page);
+
     memset(page, 0, PAGE_SIZE);
     
-    // if(fault_addr == 0x1200000){
-    //     kinfo("page start: %x\n", ROUND_DOWN(fault_addr, PAGE_SIZE));
-    //     kinfo("physical address: %x\n", pa);
-    // }
+    // kinfo("Fault address at %llx\n", fault_addr);
+    // kinfo("Actual page start address at %llx\n", ROUND_DOWN(fault_addr, PAGE_SIZE));
+    // kinfo("Allocated physic address %llx\n\n", pa);
+
+//     if(fault_addr == 0x1400000){
+//         // kinfo("page start: %x\n", ROUND_DOWN(fault_addr, PAGE_SIZE));
+//         // kinfo("physical address: %x\n", pa);
+//   //      while(1);
+//     }
 
 
     // kinfo("pmo size: %x\n", pmo->size);

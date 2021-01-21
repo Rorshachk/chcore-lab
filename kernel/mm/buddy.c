@@ -1,6 +1,7 @@
 #include <common/util.h>
 #include <common/macro.h>
 #include <common/kprint.h>
+#include <common/mmu.h>
 
 #include "buddy.h"
 
@@ -14,6 +15,7 @@ void init_buddy(struct phys_mem_pool *pool, struct page *start_page,
 		vaddr_t start_addr, u64 page_num)
 {
 //    printk("init buddy");
+    // kinfo("init buddy, page num %lld\n", page_num);
 	int order;
 	int page_idx;
 	struct page *page;
@@ -50,6 +52,10 @@ void init_buddy(struct phys_mem_pool *pool, struct page *start_page,
 		buddy_free_pages(pool, page);
 	}
 //    kdebug("free page finised\n");
+
+    // for(order = 0; order < BUDDY_MAX_ORDER; ++order){
+    //     kinfo("Order %d page num: %lld\n", order, pool->free_lists[order].nr_free);
+    // }
 }
 
 static struct page *get_buddy_chunk(struct phys_mem_pool *pool,
@@ -149,6 +155,11 @@ struct page *buddy_get_pages(struct phys_mem_pool *pool, u64 order)
     
     page->allocated = 1;
     pool->free_lists[page->order].nr_free--;
+
+//   //  if((u64)virt_to_phys((void *)page) >= 0x10000000){
+//         kinfo("target order %d\n", target_order);
+//     //}
+
 	return page;
 	// </lab2>
 }
