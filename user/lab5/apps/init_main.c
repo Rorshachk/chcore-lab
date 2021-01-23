@@ -10,6 +10,7 @@ char getch()
 	char c;
 	// TODO: your code here
 
+    c = (char)usys_getc();
 	return c;
 }
 

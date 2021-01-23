@@ -61,7 +61,9 @@ static int radix_add(struct radix *radix, u64 key, void *value)
 	int k;
 
 	if (!radix->root) {
+        // printf("before 1 new\n");
 		new = new_radix_node();
+        // printf("After 1 new.\n");
 		if (IS_ERR(new))
 			return -ENOMEM;
 		radix->root = new;
@@ -80,7 +82,9 @@ static int radix_add(struct radix *radix, u64 key, void *value)
 		k = index[i];
  //       printf("%d, ", k);
 		if (!node->children[k]) {
+            // printf("Before 2 new\n");
 			new = new_radix_node();
+            // printf("After 2 new.\n");
 			if (IS_ERR(new))
 				return -ENOMEM;
 			node->children[k] = new;

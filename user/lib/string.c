@@ -9,7 +9,7 @@ void memset(void *dst, int c, u64 len)
 	u64 i = 0;
     // printf("%llx\n", (u64)dst);
 	for (; i < len; i += 1) {
-        // if((u64)dst == 0x11ff37f)
+        // if((u64)dst == 0x13ff75d)
         //   printf("%llx ", (u64)(dst + i));
 		((u8 *) dst)[i] = (u8) c;
 	}

@@ -5,6 +5,8 @@
 #define server_ready_flag_offset 0x0
 #define server_exit_flag_offset  0x4
 
+#define MAX_FILE_SIZE 10000
+
 static void fs_dispatch(ipc_msg_t * ipc_msg)
 {
 	int ret = 0;
@@ -15,7 +17,32 @@ static void fs_dispatch(ipc_msg_t * ipc_msg)
 		switch (fr->req) {
 		case FS_REQ_SCAN:{
 				// TODO: you code here
-                while(ret = fs_server_scan(fr->path, fr->offset, fr->buff, fr->count));
+//                printf("Prepare scanning.\n");
+            // printf("path: %s\n", fr->path);
+            // printf("offset: %d\n", fr->offset);
+            // printf("count: %d\n", fr->count);
+            
+            int count = fr->count;
+	        char *buf = malloc(count);
+	        char *str = malloc(256);
+	        int start;
+	        int ret;
+	        void *vp;
+	        struct dirent *p;
+	        int i;
+	        start = fr->offset;
+
+            do {
+		        ret = fs_server_scan(fr->path, start, buf, count);
+	            vp = buf;
+        		start += ret;
+		        for (i = 0; i < ret; i++) {
+			        p = vp;
+			        strcpy(str, p->d_name);
+			        printf("%s\n", str);
+			        vp += p->d_reclen;
+		        }   
+	        } while (ret != 0);
 				break;
 			}
 		case FS_REQ_MKDIR:
@@ -43,11 +70,14 @@ static void fs_dispatch(ipc_msg_t * ipc_msg)
 		case FS_REQ_WRITE:{
 				// TODO: you code here
                 ret = fs_server_write(fr->path, fr->offset, fr->buff, fr->count);
+                if(ret)
 				break;
 			}
 		case FS_REQ_READ:{
 				// TODO: you code here
+//                char *buf = malloc(MIN(fr->count, MAX_FILE_SIZE));
                 ret = fs_server_read(fr->path, fr->offset, fr->buff, fr->count);
+                if(ret > 0) printf("%s", fr->buff);
 				break;
 			}
 		case FS_REQ_GET_SIZE:{
@@ -83,7 +113,9 @@ int main(int argc, char *argv[], char *envp[])
 		usys_exit(-1);
 	}
 
+    // info("reach here!\n");
 	fs_server_init(CPIO_BIN);
+    // info("init successful..\n");
 	info("register server value = %u\n", ipc_register_server(fs_dispatch));
 
 	server_ready_flag = info_page_addr + server_ready_flag_offset;

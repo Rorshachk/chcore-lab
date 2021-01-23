@@ -7,9 +7,9 @@
 
 int fs_server_init(u64 cpio_start)
 {
-//    printf("Start init tmpfs\n");
+    // printf("Start init tmpfs\n");
 	init_tmpfs();
-//    printf("Start call usys_fs_load_cpio\n");
+    // printf("Start call usys_fs_load_cpio\n");
 	usys_fs_load_cpio(cpio_start);
 	return tfs_load_image((char *)cpio_start);
 }

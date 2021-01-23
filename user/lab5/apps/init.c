@@ -7,13 +7,17 @@
 #include <ipc.h>
 #include <string.h>
 #include <proc.h>
+#include <malloc.h>
 
 #define SERVER_READY_FLAG(vaddr) (*(int *)(vaddr))
 #define SERVER_EXIT_FLAG(vaddr)  (*(int *)((u64)vaddr+ 4))
+#define READ_BUF_SIZE 0x100000      //1M for file read buf size
 
 extern ipc_struct_t *tmpfs_ipc_struct;
 static ipc_struct_t ipc_struct;
-static int tmpfs_scan_pmo_cap;
+static int tmpfs_scan_pmo_cap, tmpfs_read_pmo_cap;
+
+static char current_path[256] = {'/'};
 
 /* fs_server_cap in current process; can be copied to others */
 int fs_server_cap;
@@ -48,26 +52,59 @@ char *readline(const char *prompt)
 		printf("%s", prompt);
 	}
 
+    memset(buf, 0, sizeof(buf));
 	while (1) {
 		c = getch();
 		if (c < 0)
 			return NULL;
 		// TODO: your code here
 
+        if(c == '\n' || c == '\r')   //seems the end of line is \r
+          break;
+        usys_putc(c);
+        buf[i++] = c;
 	}
+    printf("\n");
 	return buf;
+}
+
+
+int fs_getsize(char *path){
+    struct fs_request fr;
+    ipc_msg_t *ipc_msg;
+    int ret;
+
+
+    fr.req = FS_REQ_GET_SIZE;
+    strcpy(fr.path, path);
+
+    ipc_msg = ipc_create_msg(tmpfs_ipc_struct, sizeof(fr), 0);
+    ipc_set_msg_data(ipc_msg, (char *)&fr, 0, sizeof(fr));
+    ret = ipc_call(tmpfs_ipc_struct, ipc_msg);
+
+    return ret;
 }
 
 int do_cd(char *cmdline)
 {
+    char path[BUFLEN];
+    memset(path, 0, sizeof(path));
 	cmdline += 2;
 	while (*cmdline == ' ')
 		cmdline++;
 	if (*cmdline == '\0')
 		return 0;
 	if (*cmdline != '/') {
+//        printf("current: %s\n", current_path);
+        strcat(path, current_path);
 	}
-	printf("Build-in command cd %s: Not implemented!\n", cmdline);
+    strcat(path, cmdline);
+    int ret = fs_getsize(path);
+
+    if(ret == -ENOENT)
+        printf("No such directory!\n");
+    
+    else strcpy(current_path, path);
 	return 0;
 }
 
@@ -80,6 +117,25 @@ int do_top()
 void fs_scan(char *path)
 {
 	// TODO: your code here
+   // printf("start fs_scan\n");
+    struct fs_request fr;
+    ipc_msg_t *ipc_msg;
+    int ret;
+
+
+    fr.req = FS_REQ_SCAN;
+    fr.offset = 0;
+    fr.count = 4096;
+    fr.buff = NULL;
+    strcpy(fr.path, path);
+
+  //  printf("fr path: %s\n", fr.path);
+
+    ipc_msg = ipc_create_msg(tmpfs_ipc_struct, sizeof(fr), 0);
+    ipc_set_msg_data(ipc_msg, (char *)&fr, 0, sizeof(fr));
+    ret = ipc_call(tmpfs_ipc_struct, ipc_msg);
+
+    return ;
 }
 
 int do_ls(char *cmdline)
@@ -90,6 +146,9 @@ int do_ls(char *cmdline)
 	cmdline += 2;
 	while (*cmdline == ' ')
 		cmdline++;
+    if(cmdline != '/'){
+        strcat(pathbuf, current_path);
+    }
 	strcat(pathbuf, cmdline);
 	fs_scan(pathbuf);
 	return 0;
@@ -103,9 +162,48 @@ int do_cat(char *cmdline)
 	cmdline += 3;
 	while (*cmdline == ' ')
 		cmdline++;
+
+    if(cmdline != '/')
+      strcat(pathbuf, current_path);
 	strcat(pathbuf, cmdline);
 	// fs_scan(pathbuf);
-	printf("apple banana This is a test file.\n");
+
+    // //send read request
+    int ret;
+    struct fs_request fr;
+    ipc_msg_t *ipc_msg;
+
+
+    // fr.req = FS_REQ_READ;
+    // fr.offset = 0;
+    // fr.count = 100000000; //set to INF, so it will read until the end
+    // strcpy(fr.path, pathbuf);
+
+    // ipc_msg = ipc_create_msg(tmpfs_ipc_struct, sizeof(fr), 0);
+    // ipc_set_msg_data(ipc_msg, (char *)&fr, 0, sizeof(fr));
+    // ret = ipc_call(tmpfs_ipc_struct, ipc_msg);
+    
+    ipc_msg = ipc_create_msg(tmpfs_ipc_struct,
+				 sizeof(struct fs_request), 1);
+	fr.req = FS_REQ_GET_SIZE;
+	strcpy((void *)fr.path, pathbuf);
+	ipc_set_msg_data(ipc_msg, (char *)&fr, 0, sizeof(struct fs_request));
+	ret = ipc_call(tmpfs_ipc_struct, ipc_msg);
+
+	fr.req = FS_REQ_READ;
+	strcpy((void *)fr.path, pathbuf);
+	fr.offset = 0;
+	fr.buff = (char *)TMPFS_READ_BUF_VADDR;
+	fr.count = ret;
+	fr.req = FS_REQ_READ;
+	ipc_set_msg_data(ipc_msg, (char *)&fr, 0, sizeof(struct fs_request));
+	ret = ipc_call(tmpfs_ipc_struct, ipc_msg);
+
+    if(ret < 0)
+      printf("No such file!");
+
+
+	//printf("apple banana This is a test file.\n");
 	return 0;
 }
 
@@ -114,7 +212,7 @@ int do_echo(char *cmdline)
 	cmdline += 4;
 	while (*cmdline == ' ')
 		cmdline++;
-	printf("%s", cmdline);
+	printf("%s\n", cmdline);
 	return 0;
 }
 
@@ -238,9 +336,12 @@ void boot_fs(void)
 	fail_cond(ret != 0, "create_process returns %d\n", ret);
 
 	fs_server_cap = tmpfs_main_thread_cap;
+    // printf("Reach here? 1\n");
 
 	while (SERVER_READY_FLAG(TMPFS_INFO_VADDR) != 1)
 		usys_yield();
+
+    // printf("Reach here? 2\n");
 
 	/* register IPC client */
 	tmpfs_ipc_struct = &ipc_struct;
@@ -257,4 +358,5 @@ void boot_fs(void)
 	fail_cond(ret < 0, "usys_map_pmo ret %d\n", ret);
 
 	printf("fs is UP.\n");
+
 }

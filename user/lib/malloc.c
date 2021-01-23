@@ -26,7 +26,7 @@ void *malloc(size_t size)
 {
 	BUG_ON(malloc_header_ + size > MALLOC_SZ);
 
-    // printf("Start malloc size: %d\n", size);
+    //printf("Start malloc size: %d\n", size);
 
 	if (malloc_header_ == 0) {
 
@@ -58,14 +58,14 @@ void *malloc(size_t size)
 	void *ptr = (void *)&malloc_buf_[malloc_header_];
 	malloc_header_ += size;
 
-    // printf("Ready to return: %x, %d\n", (int)ptr, malloc_header_);
+    // printf("Ready to return: %x, %x\n", (int)ptr, malloc_header_);
 
 	return ptr;
 }
 
 void *calloc(size_t nmemb, size_t size)
 {
-//    printf("stuck at calloc? ");
+    // printf("stuck at calloc? ");
 	(void)nmemb;
 	(void)size;
 

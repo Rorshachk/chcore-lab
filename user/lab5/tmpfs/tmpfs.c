@@ -405,7 +405,11 @@ ssize_t tfs_file_write(struct inode * inode, off_t offset, const char *data,
         size_t cur_page_ed = cur_page_st + PAGE_SIZE;
 
         if(cur_page_ed >= inode->size){
+            
+            // printf("Before malloc\n");
             page = malloc(PAGE_SIZE);
+            // printf("After malloc\n");
+            
             if(!page)  return -ENOENT;
             
             // printf("Allocated address: %llx\n", (u64)page);
@@ -413,6 +417,7 @@ ssize_t tfs_file_write(struct inode * inode, off_t offset, const char *data,
             if(ret = radix_add(&inode->data, cur_page_st, page) < 0)
               return ret;
             
+            // printf("radix add return\n");
             inode->size = cur_page_ed;
             
             // printf("Allocate address successfully.\n");
@@ -421,7 +426,7 @@ ssize_t tfs_file_write(struct inode * inode, off_t offset, const char *data,
         page = radix_get(&inode->data, cur_page_st);
         to_write = MIN(cur_page_ed - st, ed - st);
 
-    //    printf("Write %x bytes to address %x\n", to_write, (int)page);
+        // printf("Write %x bytes to address %x\n", to_write, (int)page);
 
         memcpy(page + st - cur_page_st, data, to_write);
         st += to_write;
@@ -493,12 +498,14 @@ int tfs_load_image(const char *start)
 	cpio_init_g_files();
 	cpio_extract(start, "/");
 
+    // printf("Start loading image\n");
+
 	for (f = g_files.head.next; f; f = f->next) {
 		// TODO: Lab5: your code is here
         dirat = tmpfs_root;
         leaf = f->name;
         
-    //    printf("CPIO File: %s\n", leaf);
+        // printf("CPIO File: %s\n", leaf);
         
         err = tfs_namex(&dirat, &leaf, 1);
         if(err < 0 && err != -ENOENT) return err;
@@ -560,7 +567,9 @@ static int dirent_filler(void **dirpp, void *end, char *name, off_t off,
 	dirp->d_off = off;
 	dirp->d_reclen = len;
 	dirp->d_type = type;
+    // printf("Reach here.\n");
 	strcpy(dirp->d_name, name);
+    // printf("%s\n", name);
 	*dirpp = p;
 	return len;
 }
