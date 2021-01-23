@@ -94,6 +94,10 @@ struct vmregion *find_vmr_for_va(struct vmspace *vmspace, vaddr_t addr)
 	for_each_in_list(vmr, struct vmregion, node, &(vmspace->vmr_list)) {
 		start = vmr->start;
 		end = start + vmr->size;
+
+        // if(addr == 0x30000000)
+        //   kinfo("Start: %llx, end: %llx\n", start, end);
+
 		if (addr >= start && addr < end)
 			return vmr;
 	}

@@ -102,6 +102,8 @@ int ipc_send_cap(struct ipc_connection *conn, ipc_msg_t * ipc_msg)
  */
 static u64 thread_migrate_to_server(struct ipc_connection *conn, u64 arg)
 {
+
+    // kinfo("Start migrate.\n");
 	struct thread *target = conn->target;
 
 	conn->source = current_thread;
@@ -174,10 +176,13 @@ u64 sys_ipc_call(u32 conn_cap, ipc_msg_t * ipc_msg)
     if(r < 0)
       goto out_obj_put;
 
+    // kinfo("Arrive here.\n");
 	r = copy_to_user((char *)&ipc_msg->server_conn_cap,
 			 (char *)&conn->server_conn_cap, sizeof(u64));
 	if (r < 0)
 		goto out_obj_put;
+
+    // kinfo("transfer successful.\n");
 
 	/**
 	 * Lab4
@@ -186,6 +191,8 @@ u64 sys_ipc_call(u32 conn_cap, ipc_msg_t * ipc_msg)
 	 * */
 	arg = conn->buf.server_user_addr;
 	thread_migrate_to_server(conn, arg);
+
+    // kinfo("migrate successful\n");
 
 	BUG("This function should never\n");
  out_obj_put:

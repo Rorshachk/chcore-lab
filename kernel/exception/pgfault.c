@@ -94,12 +94,11 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
 
     vmr = find_vmr_for_va(vmspace, fault_addr);
     if(vmr == NULL)  return -ENOMAPPING;
+
+    // kinfo("got vmr.\n");
     pmo = vmr->pmo;
     if(pmo->type != PMO_ANONYM)  return -ENOMAPPING;
-
-    int flg = 0;
-    if(fault_addr == 0x1331000)
-      flg = 1;
+    // kinfo("reach here.\n");
 
     void* page = get_pages(0);
 
