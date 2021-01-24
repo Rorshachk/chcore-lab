@@ -62,27 +62,20 @@ static int do_complement(char *buf, int complement_time)
     memset(str, 0, sizeof(str));
 
     vp = TMPFS_SCAN_BUF_VADDR;
-    int res = -1;
+    int res = 0, cnt = 0;
     for(int i = 0; i < ret; i++){
         p = vp;
 
         // if(strlen(buf) > 4)  
        // printf("%s ", p->d_name);
         if(strncmp(exe_name, p->d_name, strlen(exe_name)) == 0){
-            if(str[0] == 0){
-                strcpy(str, p->d_name);
-                res = strlen(str);
-            }
-            else{
-                for(int k = strlen(buf + offset); k < strlen(str); k++)
-                  if(p->d_name[k] != str[k])
-                    res = res < k ? res : k;
-            }
+            strcpy(str, p->d_name);
+            res = strlen(str);
+            cnt++;
         }
+        if(cnt == complement_time) break;
         vp += p->d_reclen;
     }
-
-    if(res == -1) return r;
 
     for(int i = strlen(buf + offset); i < res; i++){
         usys_putc(str[i]);
@@ -115,19 +108,22 @@ char *readline(const char *prompt)
 		if (c < 0)
 			return NULL;
 		// TODO: your code here
+        
+        j = 0;
+        if(c == '\t'){
+            j++;
+            while((c = getch()) == '\t') j++;
+            do_complement(buf, j);
+        }
+
 
         if(c == '\n' || c == '\r')   //seems the end of line is \r
           break;
-        
-        if(c == '\t'){
-            int j = 1;
-            do_complement(buf, 1);
-            i = strlen(buf);
-            continue;
+
+        if(c != '\t'){
+            usys_putc(c);
+            buf[i++] = c;
         }
-        
-        usys_putc(c);
-        buf[i++] = c;
 	}
     printf("\n");
 	return buf;
