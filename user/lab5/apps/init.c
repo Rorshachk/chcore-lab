@@ -24,13 +24,71 @@ int fs_server_cap;
 
 #define BUFLEN	4096
 
-static int do_complement(char *buf, char *complement, int complement_time)
+static int do_complement(char *buf, int complement_time)
 {
+  //  printf("reach here.");
 	int r = -1;
 	// TODO: your code here
+    if(complement_time == 0) return r;
+    
+    int ret = 0;
 
+    char complement[BUFLEN];
+
+    memset(complement, 0, sizeof(complement));
+    if(buf[0] != '/') strcpy(complement, current_path);
+    if(complement[0] && complement[strlen(complement) - 1] != '/')
+      strcat(complement, "/");
+    
+//    printf("%s", complement);
+
+    int offset = 0;
+    for(int i = 0; buf[i]; i++){
+        if(buf[i] == '/'){
+            offset = i;
+        }
+    }
+
+    for(int i = 0; i < offset; i++)
+      complement[strlen(complement)] = buf[i];
+
+    char *exe_name = buf + offset;
+   // printf(" %s", complement);
+    ret = fs_scan(complement);
+    
+    struct dirent *p;
+    void* vp;
+    char str[256];
+    memset(str, 0, sizeof(str));
+
+    vp = TMPFS_SCAN_BUF_VADDR;
+    int res = -1;
+    for(int i = 0; i < ret; i++){
+        p = vp;
+
+        // if(strlen(buf) > 4)  
+       // printf("%s ", p->d_name);
+        if(strncmp(exe_name, p->d_name, strlen(exe_name)) == 0){
+            if(str[0] == 0){
+                strcpy(str, p->d_name);
+                res = strlen(str);
+            }
+            else{
+                for(int k = strlen(buf + offset); k < strlen(str); k++)
+                  if(p->d_name[k] != str[k])
+                    res = res < k ? res : k;
+            }
+        }
+        vp += p->d_reclen;
+    }
+
+    if(res == -1) return r;
+
+    for(int i = strlen(buf + offset); i < res; i++){
+        usys_putc(str[i]);
+        *(buf + offset + i) = str[i];
+    }
 	return r;
-
 }
 
 extern char getch();
@@ -45,7 +103,6 @@ char *readline(const char *prompt)
 	int i = 0, j = 0;
 	signed char c = 0;
 	int ret = 0;
-	char complement[BUFLEN];
 	int complement_time = 0;
 
 	if (prompt != NULL) {
@@ -61,6 +118,14 @@ char *readline(const char *prompt)
 
         if(c == '\n' || c == '\r')   //seems the end of line is \r
           break;
+        
+        if(c == '\t'){
+            int j = 1;
+            do_complement(buf, 1);
+            i = strlen(buf);
+            continue;
+        }
+        
         usys_putc(c);
         buf[i++] = c;
 	}
