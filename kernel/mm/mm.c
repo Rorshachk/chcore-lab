@@ -70,7 +70,9 @@ void map_kernel_space(vaddr_t va, paddr_t pa, size_t len)
           return ;
 
         //L2
-        ret=get_next_ptp(next_ptp, 2, i_va, &next_ptp, &entry, true);
+        // ret=get_next_ptp(next_ptp, 2, i_va, &next_ptp, &entry, true);
+        u32 index = GET_L2_INDEX(i_va);
+        entry = &(next_ptp->ent[index]);
         
         //No L3 according to lab instruction
 

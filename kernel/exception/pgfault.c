@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2020 Institute of Parallel And Distributed Systems (IPADS), Shanghai Jiao Tong University (SJTU)
  * OS-Lab-2020 (i.e., ChCore) is licensed under the Mulan PSL v1.
@@ -39,7 +40,12 @@ void do_page_fault(u64 esr, u64 fault_ins_addr)
 	int fsc;		// fault status code
 
 	fault_addr = get_fault_addr();
+
+    // kinfo("fault_addr: %llx\n", fault_addr);
+
 	fsc = GET_ESR_EL1_FSC(esr);
+
+    // kinfo("fsc: %d\n", fsc);
 	switch (fsc) {
 	case DFSC_TRANS_FAULT_L0:
 	case DFSC_TRANS_FAULT_L1:
@@ -89,12 +95,34 @@ int handle_trans_fault(struct vmspace *vmspace, vaddr_t fault_addr)
 
     vmr = find_vmr_for_va(vmspace, fault_addr);
     if(vmr == NULL)  return -ENOMAPPING;
+
+    // kinfo("got vmr.\n");
     pmo = vmr->pmo;
     if(pmo->type != PMO_ANONYM)  return -ENOMAPPING;
-    pa = virt_to_phys(kmalloc(pmo->size));
-    pmo->start = pa;
+    // kinfo("reach here.\n");
 
-    if(map_range_in_pgtbl(vmspace->pgtbl, vmr->start, pa, pmo->size, vmr->perm) < 0) return -ENOMAPPING;
+    void* page = get_pages(0);
+
+    pa = (paddr_t)virt_to_phys((vaddr_t)page);
+
+    memset(page, 0, PAGE_SIZE);
+    
+    // kinfo("Fault address at %llx\n", fault_addr);
+    // kinfo("Actual page start address at %llx\n", ROUND_DOWN(fault_addr, PAGE_SIZE));
+    // kinfo("Allocated physic address %llx\n\n", pa);
+
+//     if(fault_addr == 0x1400000){
+//         // kinfo("page start: %x\n", ROUND_DOWN(fault_addr, PAGE_SIZE));
+//         // kinfo("physical address: %x\n", pa);
+//   //      while(1);
+//     }
+
+
+    // kinfo("pmo size: %x\n", pmo->size);
+    // kinfo("page size: %x\n", PAGE_SIZE);
+    // kinfo("vmr start: %x\n", vmr->start);
+    // kinfo("page start: %x\n", ROUND_DOWN(fault_addr, PAGE_SIZE));
+    if(map_range_in_pgtbl(vmspace->pgtbl, ROUND_DOWN(fault_addr, PAGE_SIZE), pa, PAGE_SIZE, vmr->perm) < 0) return -ENOMAPPING;
 
 	return 0;
 }
