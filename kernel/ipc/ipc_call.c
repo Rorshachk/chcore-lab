@@ -28,8 +28,27 @@
  * process to server's process
  */
 #define MAX_CAP_TRANSFER 8
+
+
+
+
+// static u64 *ipc_get_msg_cap_ptr(ipc_msg_t * ipc_msg, u64 cap_id)
+// {
+// 	return (u64 *) ((char *)ipc_msg + ipc_msg->cap_slots_offset) + cap_id;
+// }
+
+// u64 ipc_get_msg_cap(ipc_msg_t * ipc_msg, u64 cap_slot_index)
+// {
+// 	if (cap_slot_index >= ipc_msg->cap_slot_number)
+// 		return -1;
+// 	return *ipc_get_msg_cap_ptr(ipc_msg, cap_slot_index);
+// }
+
+
+
 int ipc_send_cap(struct ipc_connection *conn, ipc_msg_t * ipc_msg)
 {
+    // kinfo("ipc cap: %d\n", ipc_get_msg_cap(ipc_msg, 0));
 	int i, r;
 	u64 cap_slot_number;
 	u64 cap_slots_offset;
@@ -154,8 +173,10 @@ static u64 thread_migrate_to_server(struct ipc_connection *conn, u64 arg)
  * vmspace), do not forget to change the virtual address to server's vmspace.
  * This function should never return!
  */
+
 u64 sys_ipc_call(u32 conn_cap, ipc_msg_t * ipc_msg)
 {
+    // kinfo("ipc cap: %d\n", ipc_get_msg_cap(ipc_msg, 0));
 	struct ipc_connection *conn = NULL;
 	u64 arg;
 	int r;
