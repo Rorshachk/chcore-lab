@@ -1,32 +1,43 @@
-# ChCore
+## lab4
 
-This is the repository of ChCore labs in SE315, 2020 Spring.
+### 启动过程
 
-## build 
-  - `make` or `make build`
-  - The project will be built in `build` directory.
+翻一下boot/start.S的逻辑，可以发现cpu_id被存在x8寄存器里面，cpu_id为0的寄存器为主寄存器，然后如果是主cpu(即x8为0)，则直接跳到primary将主cpu跑起来。当主cpu进入kernel的时候(即跳到kernel/main.c)，他会把其他副cpu启动(enable_smp_core)。
 
-## Emulate
-  - `make qemu`
+同时别的cpu在start.S的时候，会阻塞在wait_until_smp_enabled，这一段的逻辑就是读取secondary_boot_flag中对应cpu的值，如果该值是0就继续循环。如果是别的非零值说明该cpu可用了，那么就跳到init_c再跳到main的secondary_start里面把这个副cpu也跑起来。
 
-  Emulate ChCore in QEMU
+然后主cpu调用的enable_smp_core里面，副cpu必须一个一个启动。因此当主cpu把一个副cpu enable之后，要显式地阻塞，直到该cpu走完上一段的过程，才能继续enable下一个cpu。
 
-## Debug with GBD
+关于练习3我认为并行启动副CPU应该是没问题的。。因为内核栈都是分开的，然后cpu_id不是通过一个全局变量的累加器，而是同时通过tpidr_el1辨识唯一的cpu_id然后对secondary_boot_flag和cpu_status进行读写，因此不会有数据竞争问题 (不确定)
 
-  - `make qemu-gdb`
+然后chcore只允许最多一个cpu访问内核代码防止数据竞争，因此kernel是用排号锁锁好的。每当一个CPU要访问内核代码(启动的时候，进入异常或者中断的时候)，都要acquire kernel的lock。其中排号锁基于FAA (内联代码中逻辑是把lock->next +1之后将他强制存在一个特定内存里面，相当于用一个volatile的变量存起来了)。
 
-  Start a GDB server running ChCore
-  
-  - `make gdb`
-  
-  Start a GDB (gdb-multiarch) client
+关于练习6我觉得原因很简单，因为lock的FAA实现会改变寄存器的值，而unlock是不会动任何寄存器的值的，因为他唯一动的变量是lock->owner，而该owner是volatile的并不会碰任何一个寄存器。因此在unlock前不需要备份寄存器。
 
-## Grade
-  - `make grade`
-  
-  Show your grade of labs in the current branch
+### 调度
 
-## Other
-  - type `Ctrl+a x` to quit QEMU
-  - type `Ctrl+d` to quit GDB
-  
+该lab用了一个比较简单基于RR的调度策略。通过定时硬件中断+budget system规定每个线程最大的运行时间。同时还有一个affinity参数，允许用户对线程专门指定运行它的cpu。对于带有效affinity参数的thread，需要在调度时放入对应cpu的调度队列。
+
+翻一下sched.h，可以发现调度的逻辑被抽象在sched_ops这个结构体内。运行的时候rr将会赋给cur_sched_ops。因此我们只要实现RR的逻辑即可。
+
+另外需要知道线程分为两种，一种是cpu本身的线程(idle thread)，不管任何时候都会存在；另一种是用户创建的线程。idle thread不受调度器队列的管理，他是被专门的idle_threads数组管理的，因此不管是enqueue还是dequeue都要排除掉idle thread。当choose thread函数在调度队列中找不到可用的用户线程的时候，就要返回这个idle thread。
+
+为防止一个线程过多占用cpu资源(spinning)，需要启用定时的硬件中断，每次中断的时候操作系统重新进入内核态，然后把budget都要减一，当budget变为0的时候cpu就要从调度队列中选一个新的线程进行调度，并且对新的线程budget进行refill，然后switch到那个thread。同时调度器还实现了一个yeild，强制cpu放弃掉当前执行的线程。具体的操作就是把当前线程的budget直接削为0然后调用sched()，调度器会自动放掉当前线程拿一个新的。
+
+回过头看irq，按照instruction所言取消注释了exception.c中的timer_init启动定时中断后，一定要把后面set_exception_vector前后的enable_irq和disable_irq给注释掉。然后每次handle irq的时候，按照他所说在对应的情况加锁，然后将对应的调度线程的budget减一，之后进行调度。最后要注意一下，因为引入了中断，操作系统会进入内核态，但调度完成之后要回到用户态执行用户线程eret_to_thread(switch_context)。
+
+### 进程的执行和通信
+
+这一部分instruction说得已经挺详细了
+
+lab需要实现spawn，spawn一个程序需要主进程fork出一个子进程然后执行改任务，即fork+exec的组合。首先需要创建一个空的子进程(即new一个process的capability对象)，然后基于elf文件本身地址将物理内存映射给该子进程。然后分PMO作为子进程运行的堆栈，并且将主进程所有的capability全都给子进程。
+
+然后初始化子进程的堆栈。栈顶端有专门一页(栈是往下长的，其实是底端？)存程序的运行参数(argc, argv, etc..)，要专门调用pmo_write把这一页写到那个位置。然后再将主进程的堆栈给写到子进程的堆栈里面，最后开出该进程的主线程。之后child process本身的capability和thread capability都会返回，供调度器进行调度。
+
+spawn的主进程和他的子进程可以通过主进程的vmspace映射进行通信，但两个毫不相关的进程需要用ipc进行通信。chcore中的ipc类似于server/client模型，两者通过conn(ipc_connection)这一capability连接。client通过ipc_call，传入conn参数和ipc_msg参数给server proces，之后将整个线程迁移到server上执行。server线程在执行迁移的线程之前，需要注册dispatcher回调函数，dispatcher函数写了当server拿到ipc的时候该怎么处理，之后执行ipc return system call返回到client。
+
+ipc_call的核心就是线程迁移。翻一下user/lab4下ipc相关的代码，发现两者之间的信息时通过ipc_msg传递的。ipc_msg有两部分，第一部分是capability slot，存两个client和server共享的capability，比如共享内存的PMO(后面写shell和tmpfs server通讯需要用)，第二部分是data，存的是client发到server的数据。在迁移之前，client通过conn_cap拿到server的thread，并且将ipc_msg中包含的capability和data全都拷贝到server的thread上，然后就可以切换到server的thread了。
+
+另外一种简单的ipc_reg_call，用的参数不是ipc_msg而是一个数字，这种ipc调用就不需要拷贝capability和data，直接迁移即可。注意传递的不管是ipc_msg还是数字，在chcore看来其实都是一个数字(传的ipc_msg是地址)，这个数字会被存在新线程的X0寄存器中。
+
+写lab4的时候对于chcore实现的ipc还是懵懵的，主要是根据instruction和注释进行填空。写完lab5之后就完全理解了，写send/recv应该也不在话下，但我懒得写，我单方面宣布我会写。
