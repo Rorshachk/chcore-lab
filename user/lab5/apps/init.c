@@ -15,7 +15,7 @@
 
 extern ipc_struct_t *tmpfs_ipc_struct;
 static ipc_struct_t ipc_struct;
-static int tmpfs_scan_pmo_cap, tmpfs_read_pmo_cap;
+static int tmpfs_scan_pmo_cap;
 
 static char current_path[256] = {'/'};
 
@@ -114,7 +114,7 @@ int do_top()
 	return 0;
 }
 
-void fs_scan(char *path)
+int fs_scan(char *path)
 {
 	// TODO: your code here
    // printf("start fs_scan\n");
@@ -126,21 +126,23 @@ void fs_scan(char *path)
     fr.req = FS_REQ_SCAN;
     fr.offset = 0;
     fr.count = 4096;
-    fr.buff = NULL;
+    fr.buff = TMPFS_SCAN_BUF_VADDR;
     strcpy(fr.path, path);
 
   //  printf("fr path: %s\n", fr.path);
 
-    ipc_msg = ipc_create_msg(tmpfs_ipc_struct, sizeof(fr), 0);
+    ipc_msg = ipc_create_msg(tmpfs_ipc_struct, sizeof(fr), 1);
+    ipc_set_msg_cap(ipc_msg, 0, tmpfs_scan_pmo_cap);
     ipc_set_msg_data(ipc_msg, (char *)&fr, 0, sizeof(fr));
     ret = ipc_call(tmpfs_ipc_struct, ipc_msg);
 
-    return ;
+    return ret;
 }
 
 int do_ls(char *cmdline)
 {
-	char pathbuf[BUFLEN];
+	int ret;
+    char pathbuf[BUFLEN];
 
 	pathbuf[0] = '\0';
 	cmdline += 2;
@@ -150,7 +152,19 @@ int do_ls(char *cmdline)
         strcat(pathbuf, current_path);
     }
 	strcat(pathbuf, cmdline);
-	fs_scan(pathbuf);
+	ret = fs_scan(pathbuf);
+
+    struct dirent *p;
+    void* vp;
+    char str[256];
+
+    vp = TMPFS_SCAN_BUF_VADDR;
+    for(int i = 0; i < ret; i++){
+        p = vp;
+        strcpy(str, p->d_name);
+        printf("%s\n", str);
+        vp += p->d_reclen;
+    }
 	return 0;
 }
 
@@ -170,8 +184,8 @@ int do_cat(char *cmdline)
 
     // //send read request
     int ret;
-    struct fs_request fr;
-    ipc_msg_t *ipc_msg;
+    // struct fs_request fr;
+    // ipc_msg_t *ipc_msg;
 
 
     // fr.req = FS_REQ_READ;
@@ -182,26 +196,34 @@ int do_cat(char *cmdline)
     // ipc_msg = ipc_create_msg(tmpfs_ipc_struct, sizeof(fr), 0);
     // ipc_set_msg_data(ipc_msg, (char *)&fr, 0, sizeof(fr));
     // ret = ipc_call(tmpfs_ipc_struct, ipc_msg);
+
+    int tmpfs_pmo_cap;
+    ret = fs_read(pathbuf, &tmpfs_pmo_cap);
+
+    // ipc_msg = ipc_create_msg(tmpfs_ipc_struct,
+	// 			 sizeof(struct fs_request), 1);
+	// fr.req = FS_REQ_GET_SIZE;
+	// strcpy((void *)fr.path, pathbuf);
+	// ipc_set_msg_data(ipc_msg, (char *)&fr, 0, sizeof(struct fs_request));
+	// ret = ipc_call(tmpfs_ipc_struct, ipc_msg);
+
+	// fr.req = FS_REQ_READ;
+	// strcpy((void *)fr.path, pathbuf);
+	// fr.offset = 0;
+	// fr.buff = (char *)TMPFS_READ_BUF_VADDR;
+	// fr.count = ret;
+	// fr.req = FS_REQ_READ;
+	// ipc_set_msg_data(ipc_msg, (char *)&fr, 0, sizeof(struct fs_request));
+	// ret = ipc_call(tmpfs_ipc_struct, ipc_msg);
+
+    if(ret < 0){
+        printf("No such file!");
+        return 0;
+    }
     
-    ipc_msg = ipc_create_msg(tmpfs_ipc_struct,
-				 sizeof(struct fs_request), 1);
-	fr.req = FS_REQ_GET_SIZE;
-	strcpy((void *)fr.path, pathbuf);
-	ipc_set_msg_data(ipc_msg, (char *)&fr, 0, sizeof(struct fs_request));
-	ret = ipc_call(tmpfs_ipc_struct, ipc_msg);
-
-	fr.req = FS_REQ_READ;
-	strcpy((void *)fr.path, pathbuf);
-	fr.offset = 0;
-	fr.buff = (char *)TMPFS_READ_BUF_VADDR;
-	fr.count = ret;
-	fr.req = FS_REQ_READ;
-	ipc_set_msg_data(ipc_msg, (char *)&fr, 0, sizeof(struct fs_request));
-	ret = ipc_call(tmpfs_ipc_struct, ipc_msg);
-
-    if(ret < 0)
-      printf("No such file!");
-
+    usys_map_pmo(SELF_CAP, tmpfs_pmo_cap, TMPFS_READ_BUF_VADDR, VM_READ | VM_WRITE);
+    printf("%s", (char *)TMPFS_READ_BUF_VADDR);
+    usys_unmap_pmo(SELF_CAP, tmpfs_pmo_cap, TMPFS_READ_BUF_VADDR);
 
 	//printf("apple banana This is a test file.\n");
 	return 0;
@@ -285,6 +307,7 @@ int run_cmd(char *cmdline)
 	}
 
 	caps[0] = fs_server_cap;
+    // printf("Reach here.\n");
 	return launch_process_with_pmos_caps(&user_elf, NULL, NULL,
 					     NULL, 0, caps, 1, 0);
 }

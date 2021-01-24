@@ -110,7 +110,7 @@ int readelf_from_kernel_cpio(const char *filename, struct user_elf *user_elf)
 }
 
 ipc_struct_t *tmpfs_ipc_struct;
-static int fs_read(const char *path, int *tmpfs_read_pmo_cap)
+int fs_read(const char *path, int *tmpfs_read_pmo_cap)
 {
 	ipc_msg_t *ipc_msg;
 	int ret;
@@ -132,8 +132,12 @@ static int fs_read(const char *path, int *tmpfs_read_pmo_cap)
 	fr.buff = (char *)TMPFS_READ_BUF_VADDR;
 	fr.count = ret;
 	fr.req = FS_REQ_READ;
+
+    // printf("Expected read cap: %lld\n", *tmpfs_read_pmo_cap);
 	ipc_set_msg_cap(ipc_msg, 0, *tmpfs_read_pmo_cap);
 	ipc_set_msg_data(ipc_msg, (char *)&fr, 0, sizeof(struct fs_request));
+
+    // printf("Read cap before ipc: %lld\n", ipc_get_msg_cap(ipc_msg, 0));
 	ret = ipc_call(tmpfs_ipc_struct, ipc_msg);
 
 	ipc_destroy_msg(ipc_msg);

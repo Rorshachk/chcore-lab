@@ -10,6 +10,8 @@
 static void fs_dispatch(ipc_msg_t * ipc_msg)
 {
 	int ret = 0;
+    // printf("ipc cap at start of dispatch: %lld\n", ipc_get_msg_cap(ipc_msg, 0));
+    // printf("ipc slot number: %lld\n", ipc_msg->cap_slot_number);
 
 	if (ipc_msg->data_len >= 4) {
 		struct fs_request *fr = (struct fs_request *)
@@ -21,28 +23,28 @@ static void fs_dispatch(ipc_msg_t * ipc_msg)
             // printf("path: %s\n", fr->path);
             // printf("offset: %d\n", fr->offset);
             // printf("count: %d\n", fr->count);
-            
-            int count = fr->count;
-	        char *buf = malloc(count);
-	        char *str = malloc(256);
-	        int start;
-	        int ret;
-	        void *vp;
-	        struct dirent *p;
-	        int i;
-	        start = fr->offset;
+            int scan_buf_cap;
+            int pmo_r;
 
-            do {
-		        ret = fs_server_scan(fr->path, start, buf, count);
-	            vp = buf;
-        		start += ret;
-		        for (i = 0; i < ret; i++) {
-			        p = vp;
-			        strcpy(str, p->d_name);
-			        printf("%s\n", str);
-			        vp += p->d_reclen;
-		        }   
-	        } while (ret != 0);
+            scan_buf_cap = ipc_get_msg_cap(ipc_msg, 0);
+
+                pmo_r = usys_map_pmo(SELF_CAP, scan_buf_cap, TMPFS_SCAN_BUF_VADDR, VM_READ | VM_WRITE);
+                BUG_ON(pmo_r < 0);
+                ret = fs_server_scan(fr->path, fr->offset, fr->buff, fr->count);
+            // do {
+		    //     ret = fs_server_scan(fr->path, start, fr->buff, fr->count);
+	        //     vp = fr->buff;
+        	// 	start += ret;
+		    //     for (i = 0; i < ret; i++) {
+			//         p = vp;
+			//         strcpy(str, p->d_name);
+			//         printf("%s\n", str);
+			//         vp += p->d_reclen;
+		    //     }
+	        // } while (ret != 0);
+
+                pmo_r = usys_unmap_pmo(SELF_CAP, scan_buf_cap, TMPFS_SCAN_BUF_VADDR);
+                BUG_ON(pmo_r < 0);
 				break;
 			}
 		case FS_REQ_MKDIR:
@@ -76,8 +78,20 @@ static void fs_dispatch(ipc_msg_t * ipc_msg)
 		case FS_REQ_READ:{
 				// TODO: you code here
 //                char *buf = malloc(MIN(fr->count, MAX_FILE_SIZE));
+                u64 read_buf_cap;
+                int pmo_r;
+
+                read_buf_cap = ipc_get_msg_cap(ipc_msg, 0);
+                // printf("read cap: %lld\n", read_buf_cap);
+                pmo_r = usys_map_pmo(SELF_CAP, read_buf_cap, TMPFS_READ_BUF_VADDR, VM_READ | VM_WRITE);
+                BUG_ON(pmo_r < 0);
+
                 ret = fs_server_read(fr->path, fr->offset, fr->buff, fr->count);
-                if(ret > 0) printf("%s", fr->buff);
+                // printf("return value: %d\n", ret);
+                // if(ret > 0) printf("%s", fr->buff);
+
+                pmo_r = usys_unmap_pmo(SELF_CAP, read_buf_cap, TMPFS_READ_BUF_VADDR);
+                BUG_ON(pmo_r < 0);
 				break;
 			}
 		case FS_REQ_GET_SIZE:{
