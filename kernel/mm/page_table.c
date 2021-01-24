@@ -20,6 +20,7 @@
 #include <common/printk.h>
 #include <common/mm.h>
 #include <common/mmu.h>
+#include <common/kprint.h>
 
 #include <common/errno.h>
 
@@ -218,6 +219,12 @@ int query_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t * pa, pte_t ** entry)
 int map_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
 		       size_t len, vmr_prop_t flags)
 {
+
+    // kinfo("VA: %llx\n", va);
+    // kinfo("PA: %llx\n", pa);
+    // kinfo("length: %d\n", len);
+
+
 	// <lab2>
     int ret;
     ptp_t* next_ptp;
@@ -225,6 +232,7 @@ int map_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
     //Use get_next_ptp(alloc=true) to add a new page
     for(vaddr_t i_va = va, i_pa = pa; i_va < va + len && i_pa < pa + len; i_pa += PAGE_SIZE, i_va += PAGE_SIZE){
         //L0
+
         if((ret=get_next_ptp((ptp_t *)pgtbl, 0, i_va, &next_ptp, &entry, true)) < 0) 
           return ret;
 
@@ -235,10 +243,17 @@ int map_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, paddr_t pa,
         //L2
         if((ret=get_next_ptp(next_ptp, 2, i_va, &next_ptp, &entry, true)) < 0)
           return ret;
+
+
         
+
         //L3
-        if((ret=get_next_ptp(next_ptp, 3, i_va, &next_ptp, &entry, true)) < 0)
-          return ret;
+        u32 index = GET_L3_INDEX(i_va);
+		entry = &(next_ptp->ent[index]);
+
+        entry->pte = 0;
+		entry->l3_page.is_valid = 1;
+		entry->l3_page.is_page = 1;
 
         //The result page descripter is stored in entry (L3 PTE)
         set_pte_flags(entry, flags, USER_PTE);
@@ -274,12 +289,16 @@ int unmap_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, size_t len)
         //L0
         if((ret=get_next_ptp((ptp_t *)pgtbl, 0, i_va, &next_ptp, &entry, true)) < 0) 
           return ret;
+        else if(ret == BLOCK_PTP){
+            entry->table.is_valid = 0;
+            continue;
+        }
 
         //L1, it's possible to return a BLOCK_PTP
         if((ret=get_next_ptp(next_ptp, 1, i_va, &next_ptp, &entry, true)) < 0)
           return ret;
         else if(ret == BLOCK_PTP){
-            entry->l1_block.is_valid = 0;
+            entry->table.is_valid = 0;
             continue;
         }
 
@@ -288,13 +307,14 @@ int unmap_range_in_pgtbl(vaddr_t * pgtbl, vaddr_t va, size_t len)
         if((ret=get_next_ptp(next_ptp, 2, i_va, &next_ptp, &entry, true)) < 0)
           return ret;
         else if(ret == BLOCK_PTP){
-            entry->l2_block.is_valid = 0;
+            entry->table.is_valid = 0;
             continue;
         }
         
         //L3
-        if((ret=get_next_ptp(next_ptp, 3, i_va, &next_ptp, &entry, true)) < 0)
-          return ret;
+        u32 index = GET_L3_INDEX(i_va);
+        entry = &(next_ptp->ent[index]);
+        entry->l3_page.is_valid = 0;
 
         //The result page descripter is stored in entry (L3 PTE)
         entry->l3_page.is_valid = 0;
